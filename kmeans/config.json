@@ -1,0 +1,14 @@
+{
+"DATABASE": {
+		"user" : "root",
+		"password": "password",
+		"host" : "localhost",
+		"db" : "stackexchange"
+		},
+"HOSTS":{
+		"master": "Master",
+		"master_port": 51000,
+		"workers": ["Master", "Hadoop1", "Hadoop2" ],
+		"worker_port": 51001
+		}
+}
