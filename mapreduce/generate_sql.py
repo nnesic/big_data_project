@@ -69,7 +69,7 @@ for line in comments_file.readlines():
 	
 	line = line.split()
 	id = int(line[0])
-	user = users[i]
+	user = users[id]
 	user.comments_count = int(line[1])
 	user.aggregate_comment_score = int(line[2])
 	user.aggregate_comment_size  = int(line[3])
@@ -79,7 +79,7 @@ for id in users:
 	posts = user.post_type_1_count + user.post_type_2_count
 	if posts == 0:
 		posts = 1
-	comments = user.comments_count
+	comments = user.comments_count * 1.0
 	if comments == 0:
 		comments = 1
 	print "INSERT INTO users (user_id, field, number_posts_type_1, number_posts_type_2, number_comments, avg_post_score, avg_comment_score, avg_post_size, avg_comment_size, upvotes, downvotes, views, age, reputation)VALUES (%d, '%s', %d, %d, %d, %f, %f, %f, %f, %d, %d, %d, %d, %d);" % (user.id, field, user.post_type_1_count, user.post_type_2_count, user.comments_count, 1.0*user.aggregate_post_score/posts, 1.0*user.aggregate_comment_score/comments, 1.0*user.aggregate_post_size/posts, 1.0*user.aggregate_comment_size/comments, user.upvotes, user.downvotes, user.views, user.age, user.reputation) 
