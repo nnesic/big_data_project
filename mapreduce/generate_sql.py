@@ -82,6 +82,6 @@ for id in users:
 	comments = user.comments_count
 	if comments == 0:
 		comments = 1
-	print "INSERT INTO users (user_id, field, number_posts_type_1, number_posts_type_2, number_comments, avg_post_score, avg_comment_score, avg_post_size, avg_comment_size, upvotes, downvotes, views, age, reputation)VALUES (%d, '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d);" % (user.id, field, user.post_type_1_count, user.post_type_2_count, user.comments_count, user.aggregate_post_score/posts, user.aggregate_comment_score/comments, user.aggregate_post_size/posts, user.aggregate_comment_size/comments, user.upvotes, user.downvotes, user.views, user.age, user.reputation) 
+	print "INSERT INTO users (user_id, field, number_posts_type_1, number_posts_type_2, number_comments, avg_post_score, avg_comment_score, avg_post_size, avg_comment_size, upvotes, downvotes, views, age, reputation)VALUES (%d, '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d);" % (user.id, field, user.post_type_1_count, user.post_type_2_count, user.comments_count, 1.0*user.aggregate_post_score/posts, 1.0*user.aggregate_comment_score/comments, 1.0*user.aggregate_post_size/posts, 1.0*user.aggregate_comment_size/comments, user.upvotes, user.downvotes, user.views, user.age, user.reputation) 
 	for tag in user.tags_count:
 		print "INSERT INTO tags (user_id, tag, tag_count) VALUES ((SELECT id from users where users.user_id = %d and field = '%s'), '%s', %d);" % (user.id, field, tag, user.tags_count[tag])

@@ -11,9 +11,9 @@ class DataLoader(object):
 		self.config = json.load(open(config_file))
 
 	def fetch_data(self, field):
-		users = {}
+		users = []
 		database = self.config["DATABASE"]
-		db = MySQLdb.connect(database["host"],database["user"],database["password"],database["db"])
+		db = MySQLdb.connect(host=database["host"], port=45000, user=database["user"], passwd=database["password"], db=database["db"])
 		cursor = db.cursor()
 		cols = "user_id, field, number_posts_type_1, number_posts_type_2, number_comments, avg_post_score, avg_comment_score, avg_post_size, avg_comment_size, upvotes, downvotes, views, age, reputation, id"
 		cursor.execute("SELECT %s from users WHERE field = '%s'" % (cols, field))
@@ -38,7 +38,7 @@ class DataLoader(object):
 			tag_cursor.execute("SELECT tag, tag_count FROM tags where user_id = %d" % row[0])
 
 			for r in tag_cursor:
-				user.tags_count[r[1]] = r[2]
+				user.tags_count[r[0]] = r[1]
 			users += [user]
 		
 		return users 
