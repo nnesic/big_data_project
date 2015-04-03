@@ -20,29 +20,34 @@ class ProcessHandler(tornado.web.RequestHandler):
         
         action = data["action"]
         if action == "points":
+            print "got points"
             points = data["points"]
             proc.set_points(points)
             self.write("ok")
             return
         elif action == "centroids":
+            print "got centroids"
             centroids = data["centroids"]
             proc.set_centroids(centroids)
             self.write("ok")
             return
 
         elif action == "evaluate":
+            print "got eval"
             distances = proc.calculate_distance_from_centroids()
             response = {"id": proc.id, "distances": distances}
             self.write(json.dumps(response))
             return
 
         elif action == "go":
+            print "got go"
             recalculated_centroids = proc.do_the_thing()
             response = {"id": proc.id, "recalculated_centroids": recalculated_centroids}
             self.write(json.dumps(response))
             print "done"
             return
         elif action == "done":
+            print "got done"
             processes.pop(id)
 
         

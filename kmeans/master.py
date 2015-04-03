@@ -8,13 +8,14 @@ from datapoint_loader import DataLoader
 import random
 import threading
 from copy import deepcopy
+import time
 
 
 ids = []
 config = json.load(open("config.json"))
 num_workers = len(config["HOSTS"]["workers"])
 worker_port = config["HOSTS"]["worker_port"]
-max_iterations = 200
+max_iterations = 2000
 
 class MainHandler(tornado.web.RequestHandler):
 
@@ -69,13 +70,12 @@ class MainHandler(tornado.web.RequestHandler):
 
 		# start with 2 centroids? 
 		num_centroids = 2
-		centroids = []
 		iterations = 0
 		another_iteration = True
 		centroids_by_number = {}
 		centroids_scores = {}
 
-		
+		start = time.time()		
 		# send the points over
 		for i in range(0, num_workers):
 			headers = {'content-type': 'application/json'}
@@ -85,7 +85,16 @@ class MainHandler(tornado.web.RequestHandler):
 
 		while (num_centroids < 10):
 			# pick random points as centroids
-			centroids = random.sample(points, num_centroids)
+			# centroids = random.sample(points, num_centroids)
+			# nope; instead generate points randomly
+			centroids = []
+			for i in range(0, num_centroids):
+				centroids += [[]]
+				for j in range(0, len(points[0])):
+					centroids[i] += [random.random()]
+			#print centroids
+
+
 			# centroids = [[4, 1], [4, 4]]
 			while (iterations < max_iterations and another_iteration):
 				
@@ -130,36 +139,43 @@ class MainHandler(tornado.web.RequestHandler):
 			payload = {"id": job_id, "action": "done"}
 			requests.post("http://%s:%d/worker/" % (config["HOSTS"]["workers"][i], worker_port), data=json.dumps(payload), headers=headers)
 
-		# now, restore the centroids information into the original ranges
-		keys = users[0].__dict__.keys()
-		keys.pop(keys.index("id"))
-		keys.pop(keys.index("tags_count"))
-		for i in range(0, len(keys)):
-			attribute = keys[i]
-			if attribute in ['id', "tags_count"]:
-				continue
-			a_min = attribute_min[attribute]
-			a_max = attribute_max[attribute]
+		ret = ""
+		
+		for num in centroids_by_number:
+			centroids = centroids_by_number[num]
+			# now, restore the centroids information into the original ranges
+			keys = users[0].__dict__.keys()
+			keys.pop(keys.index("id"))
+			keys.pop(keys.index("tags_count"))
+			for i in range(0, len(keys)):
+				attribute = keys[i]
+				if attribute in ['id', "tags_count"]:
+					continue
+				a_min = attribute_min[attribute]
+				a_max = attribute_max[attribute]
 
-			for cent in centroids:
-				cent[i] = cent[i] * (a_max - a_min) + a_min
+				for cent in centroids:
+					cent[i] = cent[i] * (a_max - a_min) + a_min
 
-		# keys = ["x", "y"]				Testing
-		# pretty print!
-		ret = "<table> <tr> <td> </td>" 
-		# header line 
-		for i in range(0, len(centroids)):
-			ret += "<td> Group %d </td> \n" % i
-		ret += '</tr>\n'
 
-		for i in range(0, len(keys)):
-			attribute = keys[i]
-			ret += "<tr><td>" + attribute + "</td>\n"
-			for j in range(0, len(centroids)):
-				ret += "<td> %.3f </td>\n" % centroids[j][i]
-			ret += "</tr>"
-			ret += '\n'
-		ret += "</table>"
+			# header line 
+			ret += "<table> <tr> <td> </td>" 
+			for i in range(0, len(centroids)):
+				ret += "<td> Group %d </td> \n" % i
+			ret += '</tr>\n'
+
+			for i in range(0, len(keys)):
+				attribute = keys[i]
+				ret += "<tr><td>" + attribute + "</td>\n"
+				for j in range(0, len(centroids)):
+					ret += "<td> %.3f </td>\n" % centroids[j][i]
+				ret += "</tr>"
+				ret += '\n'
+			ret += "</table>"
+			ret +="<br><br>"
+		end = time.time()
+		print "points: %d" % len(users)
+		print "time: %f" % (end - start)
 		self.write(ret)
 		print  "done"
 
