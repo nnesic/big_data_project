@@ -51,6 +51,8 @@ class MainHandler(tornado.web.RequestHandler):
 				val =  1.0 * users[i].__getattribute__(attribute) - a_min 
 				points[i] += [val / (a_max - a_min)]
 
+		# points = [[3, 3], [4, 3], [12, 3], [13, 3]]	 Testing
+
 		# distribute the points
 		distributed_points = []
 		for i in range(0, num_workers):
@@ -69,6 +71,8 @@ class MainHandler(tornado.web.RequestHandler):
 			id = random.randint(0, len(points) - 1)
 			centroids += [points[id]]
 		
+		# centroids = [[4, 1], [4, 4]]						Testing 
+
 		iterations = 0
 		another_iteration = True
 		adjustments = []
@@ -80,12 +84,13 @@ class MainHandler(tornado.web.RequestHandler):
 			pt_counts += [0]
 
 
-
+		
 		# send the points over
 		for i in range(0, num_workers):
 			headers = {'content-type': 'application/json'}
 			payload = {"id": job_id, "action": "points", "points": distributed_points[i]}
 			requests.post("http://%s:%d/worker/" % (config["HOSTS"]["workers"][i], worker_port), data=json.dumps(payload), headers=headers)
+
 
 		while (iterations < max_iterations and another_iteration):
 			# threading mubmo jumbo
@@ -120,8 +125,10 @@ class MainHandler(tornado.web.RequestHandler):
 				new_point = []
 				for j in range(0, len(centroids[0])):
 					new_point += [adjustments[i][j] * 1.0 / max(1, pt_counts[i])]
+				if new_point == [0, 0]:				# if no points are assigned to the centroid, we don't want it to go to 0, 0
+					new_point = centroids[i]
 				new_centroids += [new_point]
-
+			
 			# calculate the difference between the two centroids
 			differences = []
 			for i in range(0, len(centroids)):
@@ -165,6 +172,7 @@ class MainHandler(tornado.web.RequestHandler):
 			for cent in centroids:
 				cent[i] = cent[i] * (a_max - a_min) + a_min
 
+		# keys = ["x", "y"]				Testing
 		# pretty print!
 		ret = "<table> <tr> <td> </td>" 
 		# header line 

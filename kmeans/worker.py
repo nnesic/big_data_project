@@ -52,6 +52,7 @@ class Processor(object):
         self.centroids = []
 
     def set_centroids(self, centroids):
+        self.centroids = []
         for point in centroids:
             p = Point()
             p.coordinates = map(lambda x: float(x), point)
@@ -106,6 +107,7 @@ class Processor(object):
                     sum += point.coordinates[j]
                 temp += [sum]
             recalculations += [{"adjustments": temp, "point_count": cent.point_count}]
+
         #print recalculations
         return recalculations
       
