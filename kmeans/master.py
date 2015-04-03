@@ -7,6 +7,7 @@ import requests
 from datapoint_loader import DataLoader
 import random
 import threading
+from copy import deepcopy
 
 
 ids = []
@@ -33,6 +34,9 @@ class MainHandler(tornado.web.RequestHandler):
 		for user in users:
 			points += [[]]
 
+		attribute_max = {}
+		attribute_min = {}
+
 		# normalize data
 		# for each property, find min and max value, and project to a 0 - 1 range
 		for attribute in users[0].__dict__:
@@ -45,13 +49,14 @@ class MainHandler(tornado.web.RequestHandler):
 					a_max = user.__getattribute__(attribute)
 				if user.__getattribute__(attribute) < a_min:
 					a_min = user.__getattribute__(attribute)
-
+			attribute_max[attribute] = a_max
+			attribute_min[attribute] = a_min
 			# normalize and add to data points
 			for i in range(0, len(users)):
 				val =  1.0 * users[i].__getattribute__(attribute) - a_min 
 				points[i] += [val / (a_max - a_min)]
 
-		# points = [[3, 3], [4, 3], [12, 3], [13, 3]]	 Testing
+		# points = [[3, 3], [4, 3], [12, 3], [13, 3]]	 
 
 		# distribute the points
 		distributed_points = []
@@ -65,24 +70,10 @@ class MainHandler(tornado.web.RequestHandler):
 		# start with 2 centroids? 
 		num_centroids = 2
 		centroids = []
-
-		# pick random points as centroids
-		for i in range(0, num_centroids):
-			id = random.randint(0, len(points) - 1)
-			centroids += [points[id]]
-		
-		# centroids = [[4, 1], [4, 4]]						Testing 
-
 		iterations = 0
 		another_iteration = True
-		adjustments = []
-		pt_counts = []
-		for i in range(0, len(centroids)):
-			adjustments += [[]]
-			for j in range(0, len(centroids[0])):
-				adjustments[i] += [0]
-			pt_counts += [0]
-
+		centroids_by_number = {}
+		centroids_scores = {}
 
 		
 		# send the points over
@@ -92,62 +83,48 @@ class MainHandler(tornado.web.RequestHandler):
 			requests.post("http://%s:%d/worker/" % (config["HOSTS"]["workers"][i], worker_port), data=json.dumps(payload), headers=headers)
 
 
-		while (iterations < max_iterations and another_iteration):
-			# threading mubmo jumbo
-			responses = []
-
-			for i in range(0, num_workers):
-				responses += [None]
-
-			thread_list = []
-
-			for i in range(0, num_workers):
-				t = threading.Thread(target=do_work, args = (responses, i, centroids, job_id))
-				thread_list.append(t)
-				t.start()			
+		while (num_centroids < 10):
+			# pick random points as centroids
+			centroids = random.sample(points, num_centroids)
+			# centroids = [[4, 1], [4, 4]]
+			while (iterations < max_iterations and another_iteration):
 				
-
-			for thread in thread_list:
-				thread.join()
-
-	     	#aggregate all the adjustments from workers
-			for r in responses:
+				new_centroids = self.get_new_centroids(centroids, job_id)
+					
+				# calculate the difference between the two centroids
+				differences = []
 				for i in range(0, len(centroids)):
-					pt = json.loads(r.content)["recalculated_centroids"][i]
+					summup = 0
 					for j in range(0, len(centroids[0])):
-						adjustments[i][j] += pt["adjustments"][j]
-					pt_counts[i] += pt["point_count"]
+						summup += (new_centroids[i][j] - centroids[i][j])**2
+					differences += [summup**0.5]
+				max_difference = 0
+				for diff in differences:
+					if diff > max_difference:
+						max_difference = diff
+				if max_difference < 0.001:
+					another_iteration = False
 
-			new_centroids = []
+				centroids = new_centroids
+				iterations += 1
 
-			# calculate new centroids
-			for i in range(0, len(centroids)):
-				new_point = []
-				for j in range(0, len(centroids[0])):
-					new_point += [adjustments[i][j] * 1.0 / max(1, pt_counts[i])]
-				if new_point == [0, 0]:				# if no points are assigned to the centroid, we don't want it to go to 0, 0
-					new_point = centroids[i]
-				new_centroids += [new_point]
-			
-			# calculate the difference between the two centroids
-			differences = []
-			for i in range(0, len(centroids)):
-				summup = 0
-				for j in range(0, len(centroids[0])):
-					summup += (new_centroids[i][j] - centroids[i][j])**2
-				differences += [summup**0.5]
-			max_difference = 0
-			for diff in differences:
-				if diff > max_difference:
-					max_difference = diff
+			scores = self.evaluate_centroids(centroids, job_id)
+			centroids_by_number[num_centroids] = deepcopy(centroids)
+			centroids_scores[num_centroids] = scores
+			num_centroids += 1
 
-			if max_difference < 0.001:
-				another_iteration = False
 
-			centroids = new_centroids
-			iterations += 1
+		#set centroids to be the min scored set
+		min_score = 1000000000000
+		min_num = 0
+		for num in centroids_scores:
+			print "%d  %f" % (num, centroids_scores[num])
+			if centroids_scores[num] < min_score:
+				min_score = centroids_scores[num]
+				min_num = num
+		centroids = centroids_by_number[min_num]
 
-		
+
 		# tell the workers we are done
 		for i in range(0, num_workers):
 			payload = {"id": job_id, "action": "done"}
@@ -161,13 +138,8 @@ class MainHandler(tornado.web.RequestHandler):
 			attribute = keys[i]
 			if attribute in ['id', "tags_count"]:
 				continue
-			a_min = 1000000000
-			a_max = - 100000000
-			for user in users:
-				if user.__getattribute__(attribute) > a_max:
-					a_max = user.__getattribute__(attribute)
-				if user.__getattribute__(attribute) < a_min:
-					a_min = user.__getattribute__(attribute)
+			a_min = attribute_min[attribute]
+			a_max = attribute_max[attribute]
 
 			for cent in centroids:
 				cent[i] = cent[i] * (a_max - a_min) + a_min
@@ -188,12 +160,119 @@ class MainHandler(tornado.web.RequestHandler):
 			ret += "</tr>"
 			ret += '\n'
 		ret += "</table>"
-
-
-
 		self.write(ret)
 		print  "done"
-		#self.write("ok")
+
+
+
+
+	def get_new_centroids(self, centroids, job_id):
+		"""Sends the centroids to workers, and aggregates their responses into new centroids"""
+		responses = []
+		adjustments = []
+		pt_counts = []
+		for i in range(0, len(centroids)):
+			adjustments += [[]]
+			for j in range(0, len(centroids[0])):
+				adjustments[i] += [0]
+			pt_counts += [0]
+
+		for i in range(0, num_workers):
+			responses += [None]
+		thread_list = []
+		for i in range(0, num_workers):
+			t = threading.Thread(target=do_work, args = (responses, i, centroids, job_id))
+			thread_list.append(t)
+			t.start()			
+		for thread in thread_list:
+			thread.join()
+
+     	#aggregate all the adjustments from workers
+		for r in responses:
+			for i in range(0, len(centroids)):
+				pt = json.loads(r.content)["recalculated_centroids"][i]
+				for j in range(0, len(centroids[0])):
+					adjustments[i][j] += pt["adjustments"][j]
+				pt_counts[i] += pt["point_count"]
+
+		new_centroids = []
+		# calculate new centroids
+		for i in range(0, len(centroids)):
+			new_point = []
+			for j in range(0, len(centroids[0])):
+				new_point += [adjustments[i][j] * 1.0 / max(1, pt_counts[i])]
+			if new_point == [0, 0]:				# if no points are assigned to the centroid, we don't want it to go to 0, 0
+				new_point = centroids[i]
+			new_centroids += [new_point]
+
+		return new_centroids
+
+
+
+	def evaluate_centroids(self, centroids, job_id):
+		"""Sends the centroids to workers, gets average distance of points to them, and calculates the Davies-Bouldin index"""
+		responses = []
+
+		for i in range(0, num_workers):
+			responses += [None]
+		thread_list = []
+		for i in range(0, num_workers):
+			t = threading.Thread(target=eval_centroids, args = (responses, i, centroids, job_id))
+			thread_list.append(t)
+			t.start()			
+		for thread in thread_list:
+			thread.join()
+
+		# get the average distance of points to the centroid
+		pt_counts = [0] * len(centroids)
+		total_distance = [0] * len(centroids)
+		for r in responses:
+			for i in range(0, len(centroids)):
+				pt = json.loads(r.content)["distances"][i]
+				total_distance[i] += pt["total"]
+				pt_counts[i] += pt["point_count"]
+		average_distance = []
+		for i in range(0, len(total_distance)):
+			average_distance += [total_distance[i] * 1.0 / max(pt_counts[i], 1)]
+
+		summation = 0
+		import pdb
+		for i in range(0, len(centroids)):
+			max_thing = 0
+			for j in range(0, len(centroids)):
+				if i == j:
+					continue
+				# distance ci, cj
+				denom = 0
+				for c in range(0, len(centroids[0])):
+					denom += (centroids[i][c] - centroids[j][c])**2
+				denom = denom**0.5
+				if denom == 0:
+					pdb.set_trace()
+				nom = average_distance[i] + average_distance[j]
+				if nom * 1.0 / denom > max_thing:
+					max_thing = nom * 1.0 / denom
+			summation += max_thing
+		summation = summation / len(centroids)
+
+		return summation 
+
+
+def eval_centroids(responses, index, centroids, job_id):
+	try:
+		headers = {'content-type': 'application/json'}
+
+		payload = {"id": job_id, "action": "centroids", "centroids": centroids}
+		r = requests.post("http://%s:%d/worker/" % (config["HOSTS"]["workers"][index], worker_port), data=json.dumps(payload), headers=headers)
+
+		payload = {"id": job_id, "action": "evaluate"}
+		r = requests.post("http://%s:%d/worker/" % (config["HOSTS"]["workers"][index], worker_port), data=json.dumps(payload), headers=headers)
+	
+	except Exception as e:
+		print e.message
+		
+	responses[index] = r
+
 
 def do_work(responses, index, centroids, job_id):
 	try:

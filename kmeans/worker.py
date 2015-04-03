@@ -30,6 +30,12 @@ class ProcessHandler(tornado.web.RequestHandler):
             self.write("ok")
             return
 
+        elif action == "evaluate":
+            distances = proc.calculate_distance_from_centroids()
+            response = {"id": proc.id, "distances": distances}
+            self.write(json.dumps(response))
+            return
+
         elif action == "go":
             recalculated_centroids = proc.do_the_thing()
             response = {"id": proc.id, "recalculated_centroids": recalculated_centroids}
@@ -110,7 +116,29 @@ class Processor(object):
 
         #print recalculations
         return recalculations
-      
+    
+
+    def calculate_distance_from_centroids(self):
+        """for every centroid, returns what is the average distance """
+        distances = [0] * len(self.centroids)
+        resp = []
+        for point in self.points:
+            d = 0
+            cent = self.centroids[point.centroid]
+            cent.point_count += 1
+            for i in range(0, len(self.centroids)):
+                d += (point.coordinates[i] - cent.coordinates[i])**2
+            d = d**0.5
+            distances[point.centroid] += d
+
+        for i in range(0, len(distances)):
+            d = distances[i]
+            cent = self.centroids[i]
+            resp += [{"total": d, "point_count": cent.point_count}]
+
+        return resp
+
+
 
 
 
