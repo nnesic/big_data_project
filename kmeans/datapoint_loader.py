@@ -21,12 +21,12 @@ class DataLoader(object):
 			user = User(row[0])
 			user.post_type_1_count = row[2]
 	                user.post_type_2_count = row[3]
-                	user.avg_post_score = row[5]
-                	user.avg_post_size = row[7]
+                	user.avg_post_score = float(row[5])
+                	user.avg_post_size = float(row[7])
                 	user.tags_count = {}
                 	user.comments_count = row[4]
-                	user.avg_comment_size = row[8]
-                	user.avg_comment_score = row[6]
+                	user.avg_comment_size = float(row[8])
+                	user.avg_comment_score = float(row[6])
                		user.upvotes = row[9]
                 	user.downvotes = row[10]
                 	user.views = row[11]

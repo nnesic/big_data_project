@@ -8,7 +8,7 @@
 "HOSTS":{
 		"master": "Master",
 		"master_port": 51000,
-		"workers": ["Master", "Hadoop1", "Hadoop2" ],
+		"workers": ["localhost" ],
 		"worker_port": 51001
 		}
 }

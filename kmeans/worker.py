@@ -34,11 +34,12 @@ class ProcessHandler(tornado.web.RequestHandler):
             recalculated_centroids = proc.do_the_thing()
             response = {"id": proc.id, "recalculated_centroids": recalculated_centroids}
             self.write(json.dumps(response))
+            print "done"
             return
         elif action == "done":
             processes.pop(id)
 
-    
+        
         self.write(json.dumps(processes))
 
 
@@ -53,13 +54,13 @@ class Processor(object):
     def set_centroids(self, centroids):
         for point in centroids:
             p = Point()
-            p.coordinates = map(lambda x: int(x), point)
+            p.coordinates = map(lambda x: float(x), point)
             self.centroids += [p]
 
     def set_points(self, points):
         for point in points:
             p = Point()
-            p.coordinates = map(lambda x: int(x), point)
+            p.coordinates = map(lambda x: float(x), point)
             self.points += [p]
 
     def do_the_thing(self):
@@ -69,6 +70,10 @@ class Processor(object):
 
     def assign_points(self):
         """ find the nearest centroid for each point """
+        # clear all point counts
+        for cent in self.centroids:
+            cent.point_count = 0
+            
         for point in self.points:
             min_distance = 1000000000000
             min_i = -1
@@ -134,5 +139,5 @@ application = tornado.web.Application([
 ])
  
 if __name__ == "__main__":
-    application.listen(50001)
+    application.listen(51001)
     tornado.ioloop.IOLoop.instance().start()
