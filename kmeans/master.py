@@ -58,6 +58,11 @@ class MainHandler(tornado.web.RequestHandler):
 				val =  1.0 * users[i].__getattribute__(attribute) - a_min 
 				points[i] += [val / (a_max - a_min)]
 
+		total_points = 5000
+		difference = total_points - len(points)
+		for i in range(0, difference):
+			points += [points[0]]
+
 		# points = [[3, 3], [4, 3], [12, 3], [13, 3]]	 
 
 		# distribute the points
@@ -70,7 +75,7 @@ class MainHandler(tornado.web.RequestHandler):
 
 
 		# start with 2 centroids? 
-		num_centroids = 2
+		num_centroids = 9
 		iterations = 0
 		another_iteration = True
 		centroids_by_number = {}
@@ -118,12 +123,19 @@ class MainHandler(tornado.web.RequestHandler):
 				centroids = new_centroids
 				iterations += 1
 
+			break
 			scores = self.evaluate_centroids(centroids, job_id)
 			centroids_by_number[num_centroids] = deepcopy(centroids)
 			centroids_scores[num_centroids] = scores
 			num_centroids += 1
 
 
+		end = time.time()
+
+		ret =  "points: %d \n" % len(points)
+		ret += "time: %f" % (end - start)
+		self.write(ret)
+		return
 		#set centroids to be the min scored set
 		min_score = 1000000000000
 		min_num = 0
