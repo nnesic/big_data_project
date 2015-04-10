@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<canvas id="myCanvas" width="1000" height="1000" style="border:1px solid #d3d3d3;">
+Your browser does not support the HTML5 canvas tag.</canvas>
+
+var c = document.getElementById("myCanvas");
+var ctx = c.getContext("2d");
+
+
+
+
+
+
+ctx.beginPath();
+ctx.arc(50, 50, 10, 0, 2 * Math.PI);
+ctx.fillStyle = 'green';
+ctx.fill();
+ctx.stroke();
+
+
+ctx.font = "14px Arial";	
+ctx.fillText("Group 1",10,50);
+
+</body>
+</html>

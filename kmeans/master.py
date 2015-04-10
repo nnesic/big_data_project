@@ -9,6 +9,7 @@ import random
 import threading
 from copy import deepcopy
 import time
+from canvas_generator import CanvasGenerator
 
 
 ids = []
@@ -41,7 +42,7 @@ class MainHandler(tornado.web.RequestHandler):
 		# normalize data
 		# for each property, find min and max value, and project to a 0 - 1 range
 		for attribute in users[0].__dict__:
-			if attribute in ['id', "tags_count"]:
+			if attribute in ['id', "tags_count", "user_id"]:
 				continue
 			a_min = 1000000000
 			a_max = - 100000000
@@ -141,38 +142,46 @@ class MainHandler(tornado.web.RequestHandler):
 
 		ret = ""
 		
+		# for num in centroids_by_number:
+		# 	centroids = centroids_by_number[num]
+		# 	# now, restore the centroids information into the original ranges
+		# 	keys = users[0].__dict__.keys()
+		# 	keys.pop(keys.index("id"))
+		# 	keys.pop(keys.index("tags_count"))
+		# 	for i in range(0, len(keys)):
+		# 		attribute = keys[i]
+		# 		if attribute in ['id', "tags_count"]:
+		# 			continue
+		# 		a_min = attribute_min[attribute]
+		# 		a_max = attribute_max[attribute]
+
+		# 		for cent in centroids:
+		# 			cent[i] = cent[i] * (a_max - a_min) + a_min
+
+
+		# 	# header line 
+		# 	ret += "<table> <tr> <td> </td>" 
+		# 	for i in range(0, len(centroids)):
+		# 		ret += "<td> Group %d </td> \n" % i
+		# 	ret += '</tr>\n'
+
+		# 	for i in range(0, len(keys)):
+		# 		attribute = keys[i]
+		# 		ret += "<tr><td>" + attribute + "</td>\n"
+		# 		for j in range(0, len(centroids)):
+		# 			ret += "<td> %.3f </td>\n" % centroids[j][i]
+		# 		ret += "</tr>"
+		# 		ret += '\n'
+		# 	ret += "</table>"
+		# 	ret +="<br><br>"
 		for num in centroids_by_number:
 			centroids = centroids_by_number[num]
-			# now, restore the centroids information into the original ranges
-			keys = users[0].__dict__.keys()
-			keys.pop(keys.index("id"))
-			keys.pop(keys.index("tags_count"))
-			for i in range(0, len(keys)):
-				attribute = keys[i]
-				if attribute in ['id', "tags_count"]:
-					continue
-				a_min = attribute_min[attribute]
-				a_max = attribute_max[attribute]
-
-				for cent in centroids:
-					cent[i] = cent[i] * (a_max - a_min) + a_min
-
-
-			# header line 
-			ret += "<table> <tr> <td> </td>" 
-			for i in range(0, len(centroids)):
-				ret += "<td> Group %d </td> \n" % i
-			ret += '</tr>\n'
-
-			for i in range(0, len(keys)):
-				attribute = keys[i]
-				ret += "<tr><td>" + attribute + "</td>\n"
-				for j in range(0, len(centroids)):
-					ret += "<td> %.3f </td>\n" % centroids[j][i]
-				ret += "</tr>"
-				ret += '\n'
-			ret += "</table>"
-			ret +="<br><br>"
+			attributes = users[0].__dict__.keys()
+			attributes.pop(attributes.index("id"))
+			attributes.pop(attributes.index("tags_count"))
+			#attributes.pop(keys.index("user_id"))
+			cg = CanvasGenerator(attributes, centroids)
+			ret += cg.get_canvas()
 		end = time.time()
 		print "points: %d" % len(users)
 		print "time: %f" % (end - start)
