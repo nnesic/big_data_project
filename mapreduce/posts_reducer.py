@@ -16,7 +16,6 @@ sys.stderr.write("made it to reducer!\n")
 users = {}
 for line in sys.stdin:
 	try:	
-		sys.stderr.write(line + "\n")
 		vals = line.split()
         	user_id = int(vals[0])
 		post_type_1 = int(vals[1])

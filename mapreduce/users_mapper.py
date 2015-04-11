@@ -7,7 +7,7 @@ input_string = sys.stdin.read()
 
 
 root = ET.fromstring(input_string)
-print # id reputation views upvotes downvotes age
+#print # id reputation views upvotes downvotes age
 for child in root.getchildren():
         try:
                 user_id = int(child.get("Id"))
