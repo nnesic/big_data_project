@@ -7,28 +7,36 @@ import matplotlib as matplotlib
 
 loader = DataLoader()
 
-def age_in_field(field):
+def per_field(field):
 	
 	users = loader.fetch_data(field)
 	points = {}
-
+	count_points = {}
 	for user in users:
 		if user.age not in points:
 			points[user.age] = 0
-		points[user.age] += 1
+		if user.age not in count_points:
+			count_points[user.age] = 0
+		points[user.age] += user.downvotes
+		count_points[user.age] += 1
 
+	counts = []
 	age = []
-	count = []
+	downvotes = []
 	
+
 	for point in points:
 		if point >= 13:
 			age += [point]
-			count += [points[point]]
-	total_count = sum(count)
+			downvotes += [points[point]]
+			counts += [count_points[point]]
+
+	for i in range(0, len(downvotes)):
+		downvotes[i] = downvotes[i] * 1.0 / counts[i]
 	# turn counts to percentages
-	for i in range(0, len(count)):
-		count[i] = count[i] * 100.0 / total_count
-	plt.plot(age, count)
+	#for i in range(0, len(downvotes)):
+	#	downvotes[i] = downvotes[i] * 100.0 / total_count
+	plt.plot(age, downvotes)
 
 
 
@@ -37,11 +45,11 @@ def age_in_field(field):
 def all(fields) :
 
 	for field in fields:
-		age_in_field(field)
+		per_field(field)
 
 	plt.xlabel('age')
-	plt.ylabel('% of users')
-	plt.title('Age distribution of users ')
+	plt.ylabel('Average number of downvotes')
+	plt.title('Average number of downvotes per age')
 	plt.legend(fields)
 	plt.grid(True)
 	plt.savefig("age-%s.png" % field)
@@ -49,10 +57,10 @@ def all(fields) :
 
 def one(field): 
 	
-	age_in_field(field)
+	per_field(field)
 	plt.xlabel('age')
-	plt.ylabel('# of users')
-	plt.title('Age distribution of users ')
+	plt.ylabel('Average number of downvotes')
+	plt.title('Average number of downvotes per age')
 	plt.grid(True)
 	plt.savefig("age-%s.png" % field)
 	plt.show()
@@ -63,7 +71,7 @@ font = {'family' : 'normal',
 
 matplotlib.rc('font', **font)
 fields = ["beer", "anime", "apple", "askubuntu", "christianity", "datascience", "gaming", "mathoverflow", "parenting", "tor"]
-six_fields = ["anime", "apple", "christianity", "datascience", "gaming","parenting"]
+six_fields = ["anime", "datascience", "apple", "christianity", "gaming","parenting"]
 if len(sys.argv) == 2:
 
 	field = sys.argv[1]

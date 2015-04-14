@@ -20,7 +20,7 @@ max_iterations = 2000
 
 class MainHandler(tornado.web.RequestHandler):
 
-	def get(self, field):
+	def get(self, field, num_centroids):
 		# find an id to assign to the job
 		job_id = 0
 		while job_id in ids:
@@ -58,10 +58,7 @@ class MainHandler(tornado.web.RequestHandler):
 				val =  1.0 * users[i].__getattribute__(attribute) - a_min 
 				points[i] += [val / (a_max - a_min)]
 
-		total_points = 5000
-		difference = total_points - len(points)
-		for i in range(0, difference):
-			points += [points[0]]
+		
 
 		# points = [[3, 3], [4, 3], [12, 3], [13, 3]]	 
 
@@ -75,7 +72,8 @@ class MainHandler(tornado.web.RequestHandler):
 
 
 		# start with 2 centroids? 
-		num_centroids = 9
+		#num_centroids = 2
+		num_centroids = int(num_centroids)
 		iterations = 0
 		another_iteration = True
 		centroids_by_number = {}
@@ -89,62 +87,63 @@ class MainHandler(tornado.web.RequestHandler):
 			requests.post("http://%s:%d/worker/" % (config["HOSTS"]["workers"][i], worker_port), data=json.dumps(payload), headers=headers)
 
 
-		while (num_centroids < 10):
-			# pick random points as centroids
-			# centroids = random.sample(points, num_centroids)
-			# nope; instead generate points randomly
-			centroids = []
-			for i in range(0, num_centroids):
-				centroids += [[]]
-				for j in range(0, len(points[0])):
-					centroids[i] += [random.random()]
-			#print centroids
+		#while (num_centroids < 10):
+		# pick random points as centroids
+		# centroids = random.sample(points, num_centroids)
+		# nope; instead generate points randomly
+		centroids = []
+		for i in range(0, num_centroids):
+			centroids += [[]]
+			for j in range(0, len(points[0])):
+				centroids[i] += [random.random()]
+		#print centroids
+		for i in range(0, num_workers):
+			headers = {'content-type': 'application/json'}
+			payload = {"id": job_id, "action": "points", "points": distributed_points[i]}
+			requests.post("http://%s:%d/worker/" % (config["HOSTS"]["workers"][i], worker_port), data=json.dumps(payload), headers=headers)
 
 
-			# centroids = [[4, 1], [4, 4]]
-			while (iterations < max_iterations and another_iteration):
+		# centroids = [[4, 1], [4, 4]]
+		while (iterations < max_iterations and another_iteration):
+			
+			new_centroids = self.get_new_centroids(centroids, job_id)
 				
-				new_centroids = self.get_new_centroids(centroids, job_id)
-					
-				# calculate the difference between the two centroids
-				differences = []
-				for i in range(0, len(centroids)):
-					summup = 0
-					for j in range(0, len(centroids[0])):
-						summup += (new_centroids[i][j] - centroids[i][j])**2
-					differences += [summup**0.5]
-				max_difference = 0
-				for diff in differences:
-					if diff > max_difference:
-						max_difference = diff
-				if max_difference < 0.001:
-					another_iteration = False
+			# calculate the difference between the two centroids
+			differences = []
+			for i in range(0, len(centroids)):
+				summup = 0
+				for j in range(0, len(centroids[0])):
+					summup += (new_centroids[i][j] - centroids[i][j])**2
+				differences += [summup**0.5]
+			max_difference = 0
+			for diff in differences:
+				if diff > max_difference:
+					max_difference = diff
+			if max_difference < 0.001:
+				another_iteration = False
 
-				centroids = new_centroids
-				iterations += 1
+			centroids = new_centroids
+			iterations += 1
 
-			break
-			scores = self.evaluate_centroids(centroids, job_id)
-			centroids_by_number[num_centroids] = deepcopy(centroids)
-			centroids_scores[num_centroids] = scores
-			num_centroids += 1
+		
+		scores = self.evaluate_centroids(centroids, job_id)
+		print "centroids: %d score: %f" %(num_centroids, scores)
+		#centroids_by_number[num_centroids] = deepcopy(centroids)
+		#centroids_scores[num_centroids] = scores
+		#num_centroids += 1
 
 
 		end = time.time()
 
-		ret =  "points: %d \n" % len(points)
-		ret += "time: %f" % (end - start)
-		self.write(ret)
-		return
 		#set centroids to be the min scored set
-		min_score = 1000000000000
-		min_num = 0
-		for num in centroids_scores:
-			print "%d  %f" % (num, centroids_scores[num])
-			if centroids_scores[num] < min_score:
-				min_score = centroids_scores[num]
-				min_num = num
-		centroids = centroids_by_number[min_num]
+		# min_score = 1000000000000
+		# min_num = 0
+		# for num in centroids_scores:
+		# 	print "%d  %f" % (num, centroids_scores[num])
+		# 	if centroids_scores[num] < min_score:
+		# 		min_score = centroids_scores[num]
+		# 		min_num = num
+		# centroids = centroids_by_number[min_num]
 
 
 		# tell the workers we are done
@@ -186,14 +185,15 @@ class MainHandler(tornado.web.RequestHandler):
 		# 		ret += '\n'
 		# 	ret += "</table>"
 		# 	ret +="<br><br>"
-		for num in centroids_by_number:
-			centroids = centroids_by_number[num]
-			attributes = users[0].__dict__.keys()
-			attributes.pop(attributes.index("id"))
-			attributes.pop(attributes.index("tags_count"))
-			#attributes.pop(keys.index("user_id"))
-			cg = CanvasGenerator(attributes, centroids)
-			ret += cg.get_canvas()
+		#for num in centroids_by_number:
+			#centroids = centroids_by_number[num]
+		#print centroids
+		attributes = users[0].__dict__.keys()
+		attributes.pop(attributes.index("id"))
+		attributes.pop(attributes.index("tags_count"))
+		#attributes.pop(keys.index("user_id"))
+		cg = CanvasGenerator(attributes, centroids)
+		ret += cg.get_canvas()
 		end = time.time()
 		print "points: %d" % len(users)
 		print "time: %f" % (end - start)
@@ -328,7 +328,7 @@ def do_work(responses, index, centroids, job_id):
 
 
 application = tornado.web.Application([
-    (r"/master/([\w]+)", MainHandler)
+    (r"/master/([\w]+)/([0-9]+)", MainHandler)
 ])
  
 

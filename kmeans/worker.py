@@ -46,6 +46,7 @@ class ProcessHandler(tornado.web.RequestHandler):
             self.write(json.dumps(response))
             print "done"
             return
+
         elif action == "done":
             print "got done"
             processes.pop(id)
@@ -70,6 +71,7 @@ class Processor(object):
             self.centroids += [p]
 
     def set_points(self, points):
+        self.points = []
         for point in points:
             p = Point()
             p.coordinates = map(lambda x: float(x), point)
@@ -125,6 +127,7 @@ class Processor(object):
 
     def calculate_distance_from_centroids(self):
         """for every centroid, returns what is the average distance """
+        self.assign_points()
         distances = [0] * len(self.centroids)
         resp = []
         for point in self.points:
