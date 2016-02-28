@@ -9,4 +9,4 @@ The goal of the clustering was to use a dump of StackExchange database to identi
 The implementation is quite simplistic, and not particularly robust, its primary purpose being trying my hand at writing a distributed 
 algorithm and then making some pretty graphs that measure the performance of the said algorithm. 
 
-Included is the project report, which goes into more detail on the implementation and results of the clustering. 
+Included is an informal project report, which goes into more detail on the implementation and results of the clustering. 
