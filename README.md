@@ -1,6 +1,6 @@
 # Distributed K-means 
 
-This is a simple implementation of the distributed K-means algorithm done as the final project in Big Data cours.
+This is a simple implementation of the distributed K-means algorithm done as the final project in Big Data course.
 It follows the map-reduce pattern, where the master distributes data points to various worker nodes, which calculate the necessary
 adjustments to the centroids. The data is returned to the master, which aggregates the adjustments and evaluates whether more 
 itterations of the algorithm are needed. 
